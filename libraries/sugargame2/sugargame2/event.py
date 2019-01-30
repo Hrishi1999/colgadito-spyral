@@ -1,5 +1,6 @@
-import gtk
-import gobject
+import gi
+gi.require_version('Gtk', '3.0')
+from gi.repository import Gtk, GObject, Gdk
 import pygame
 import pygame.event 
 
@@ -54,39 +55,39 @@ class Translator(object):
         pygame.K_RSHIFT: pygame.KMOD_RSHIFT,
     }
     
-    def __init__(self, mainwindow, inner_evb):
+    def __init__(self, activity, inner_evb):
         """Initialise the Translator with the windows to which to listen"""
-        self._mainwindow = mainwindow
+        self._activity = activity
         self._inner_evb = inner_evb
 
         # Enable events
         # (add instead of set here because the main window is already realized)
-        self._mainwindow.add_events(
-            gtk.gdk.KEY_PRESS_MASK | \
-            gtk.gdk.KEY_RELEASE_MASK | \
-            gtk.gdk.VISIBILITY_NOTIFY_MASK
+        self._activity.add_events(
+            Gdk.EventMask.KEY_PRESS_MASK | \
+            Gdk.EventMask.KEY_RELEASE_MASK | \
+            Gdk.EventMask.VISIBILITY_NOTIFY_MASK
         )
         
         self._inner_evb.set_events(
-            gtk.gdk.POINTER_MOTION_MASK | \
-            gtk.gdk.POINTER_MOTION_HINT_MASK | \
-            gtk.gdk.BUTTON_MOTION_MASK | \
-            gtk.gdk.BUTTON_PRESS_MASK | \
-            gtk.gdk.BUTTON_RELEASE_MASK
+            Gdk.EventMask.POINTER_MOTION_MASK | \
+            Gdk.EventMask.POINTER_MOTION_HINT_MASK | \
+            Gdk.EventMask.BUTTON_MOTION_MASK | \
+            Gdk.EventMask.BUTTON_PRESS_MASK | \
+            Gdk.EventMask.BUTTON_RELEASE_MASK
         )
 
-        self._mainwindow.set_flags(gtk.CAN_FOCUS)
-        self._inner_evb.set_flags(gtk.CAN_FOCUS)
+        self._activity.set_can_focus(True)
+        self._inner_evb.set_can_focus(True)
         
         # Callback functions to link the event systems
-        self._mainwindow.connect('unrealize', self._quit_cb)
-        self._mainwindow.connect('visibility_notify_event', self._visibility)
+        self._activity.connect('unrealize', self._quit_cb)
+        self._activity.connect('visibility_notify_event', self._visibility)
         self._inner_evb.connect('key_press_event', self._keydown_cb)
         self._inner_evb.connect('key_release_event', self._keyup_cb)
         self._inner_evb.connect('button_press_event', self._mousedown_cb)
         self._inner_evb.connect('button_release_event', self._mouseup_cb)
         self._inner_evb.connect('motion-notify-event', self._mousemove_cb)
-        self._inner_evb.connect('expose-event', self._expose_cb)
+        self._inner_evb.connect('draw', self._expose_cb)
         self._inner_evb.connect('configure-event', self._resize_cb)
         self._inner_evb.connect('screen-changed', self._screen_changed_cb)
         
@@ -164,7 +165,7 @@ class Translator(object):
         return mod
         
     def _keyevent(self, widget, event, type):
-        key = gtk.gdk.keyval_name(event.keyval)
+        key = Gdk.keyval_name(event.keyval)
         if key is None:
             # No idea what this key is.
             return False 
@@ -178,7 +179,7 @@ class Translator(object):
             keycode = getattr(pygame, 'K_'+key.lower())
         elif key == 'XF86Start':
             # view source request, specially handled...
-            self._mainwindow.view_source()
+            self._activity.view_source()
         else:
             print 'Key %s unrecognized' % key
             
@@ -188,7 +189,7 @@ class Translator(object):
             self.__keystate[keycode] = type == pygame.KEYDOWN
             if type == pygame.KEYUP:
                 mod = self._keymods()
-            ukey = unichr(gtk.gdk.keyval_to_unicode(event.keyval))
+            ukey = unichr(Gdk.keyval_to_unicode(event.keyval))
             if ukey == '\000':
                 ukey = ''
             evt = pygame.event.Event(type, key=keycode, unicode=ukey, mod=mod)
@@ -231,9 +232,9 @@ class Translator(object):
         self.__mouse_pos = (x, y)
         
         self.__button_state = [
-            state & gtk.gdk.BUTTON1_MASK and 1 or 0,
-            state & gtk.gdk.BUTTON2_MASK and 1 or 0,
-            state & gtk.gdk.BUTTON3_MASK and 1 or 0,
+            state & Gdk.BUTTON1_MASK and 1 or 0,
+            state & Gdk.BUTTON2_MASK and 1 or 0,
+            state & Gdk.BUTTON3_MASK and 1 or 0,
         ]
         
         evt = pygame.event.Event(pygame.MOUSEMOTION,
